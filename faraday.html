@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faraday's Law Simulator</title>
+<style>
+:root{--bg:#eef2f5;--panel:#fff;--ink:#17222d;--mute:#667583;--line:#d5dde5;--accent:#1f6fb2;--scene:#f7fafc}
+@media (prefers-color-scheme:dark){:root{--bg:#10161c;--panel:#1a232c;--ink:#e8eef4;--mute:#9aa8b5;--line:#2c3945;--accent:#5aa9e6;--scene:#14202a}}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Trebuchet MS","Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+.app{display:grid;grid-template-columns:1fr 310px;gap:12px;padding:12px;max-width:1250px;margin:auto}
+@media(max-width:900px){.app{grid-template-columns:1fr}}
+h1{font-size:20px;margin:0 0 8px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;margin-bottom:8px}
+canvas{width:100%;height:auto;display:block;border-radius:6px;touch-action:none}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:9px}
+.panel h2{font-size:15px;margin:0}
+label{font-size:13px;display:block}
+.row{display:flex;justify-content:space-between;gap:8px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+select,button{font:inherit;font-size:14px;padding:7px 10px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btns{display:flex;gap:6px;flex-wrap:wrap}.btns button{flex:1}
+.chk{display:flex;gap:6px;align-items:center}
+.data{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px}
+.data div{background:var(--bg);border-radius:6px;padding:6px 8px}
+.data b{display:block;font-size:15px}
+.formula{font-size:17px;text-align:center;padding:8px;background:var(--bg);border-radius:6px;font-weight:bold}
+.note{font-size:13px;line-height:1.45;color:var(--mute)}
+.msg{font-size:14px;font-weight:bold;color:var(--accent);min-height:20px;margin:2px 4px 8px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div>
+    <h1>Faraday's Law of Electromagnetic Induction</h1>
+    <div class="tabs" id="tabs"></div>
+    <div class="stage"><canvas id="scene" width="760" height="400"></canvas></div>
+    <div class="msg" id="status"></div>
+    <div class="stage"><canvas id="graph" width="760" height="190"></canvas></div>
+  </div>
+  <div class="panel">
+    <div class="formula">ε = −N · dΦ/dt</div>
+    <div class="btns"><button id="pause">Pause</button><button id="reset">Reset</button></div>
+    <label><div class="row"><span>Simulation speed</span><b id="vts">1×</b></div><input id="ts" type="range" min="0.1" max="2" step="0.1" value="1"></label>
+    <h2>Controls</h2>
+    <div id="ctl" style="display:flex;flex-direction:column;gap:9px"></div>
+    <div class="btns" id="btns"></div>
+    <h2>Live readings</h2>
+    <div class="data">
+      <div>Flux linkage NΦ<b id="rPhi">0</b></div>
+      <div>EMF ε<b id="rE">0</b></div>
+      <div>Current I = ε/R<b id="rI">0</b></div>
+      <div>Power P = εI<b id="rP">0</b></div>
+    </div>
+    <div class="note" id="extra"></div>
+    <h2>What is happening?</h2>
+    <div class="note" id="info"></div>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const sc=$('scene'),S=sc.getContext('2d'),gr=$('graph'),G=gr.getContext('2d');
+const SW=760,SH=400,GW=760,GH=190;
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const BLUE='#2a6fd6',RED='#d9541f',GREEN='#1b9a45';
+let mode='A',T=0,paused=false,buf=[],prevPhi=null,emf=0,phi=0,ref=.3,dotPh=0;
+
+function arrow(x,y,dx,dy,col,w){w=w||3;if(Math.hypot(dx,dy)<4)return;
+  S.strokeStyle=col;S.fillStyle=col;S.lineWidth=w;S.beginPath();S.moveTo(x,y);S.lineTo(x+dx,y+dy);S.stroke();
+  const a=Math.atan2(dy,dx),X=x+dx,Y=y+dy;S.beginPath();S.moveTo(X,Y);
+  S.lineTo(X-10*Math.cos(a-.4),Y-10*Math.sin(a-.4));S.lineTo(X-10*Math.cos(a+.4),Y-10*Math.sin(a+.4));S.fill();}
+function tri(x,y,d,col){S.fillStyle=col;S.beginPath();S.moveTo(x+6*d,y);S.lineTo(x-5*d,y-5);S.lineTo(x-5*d,y+5);S.fill();}
+function bulb(x,y){const b=clamp(Math.abs(emf)/ref,0,1);
+  const g=S.createRadialGradient(x,y,2,x,y,46);g.addColorStop(0,'rgba(255,214,70,'+.9*b+')');g.addColorStop(1,'rgba(255,214,70,0)');
+  S.fillStyle=g;S.beginPath();S.arc(x,y,46,0,7);S.fill();
+  S.fillStyle='rgba(255,236,150,'+(.25+.75*b)+')';S.strokeStyle=css('--ink');S.lineWidth=2;
+  S.beginPath();S.arc(x,y,17,0,7);S.fill();S.stroke();S.fillStyle=css('--mute');S.fillRect(x-9,y+17,18,9);}
+function gauge(x,y){S.strokeStyle=css('--ink');S.lineWidth=2;S.beginPath();S.arc(x,y,40,Math.PI*1.2,Math.PI*1.8);S.stroke();
+  const a=-Math.PI/2+clamp(emf/ref,-1,1)*.3*Math.PI;S.strokeStyle=RED;S.lineWidth=3;
+  S.beginPath();S.moveTo(x,y);S.lineTo(x+38*Math.cos(a),y+38*Math.sin(a));S.stroke();
+  S.fillStyle=css('--ink');S.font='12px sans-serif';S.textAlign='center';S.fillText('Voltmeter',x,y+22);S.textAlign='left';}
+function label(t,x,y,col){S.fillStyle=col||css('--ink');S.font='bold 13px sans-serif';S.fillText(t,x,y);}
+
+const M={
+A:{name:'Magnet & coil',
+ ctl:[{k:'N',l:'Number of loops N',min:1,max:8,s:1,v:3},
+  {k:'a',l:'Coil radius',min:.6,max:1.6,s:.05,v:1,u:' m'},
+  {k:'S',l:'Magnet strength',min:1,max:10,s:.5,v:5},
+  {k:'R',l:'Circuit resistance',min:1,max:20,s:1,v:5,u:' Ω'},
+  {k:'f',l:'Auto-move frequency',min:.1,max:1.5,s:.05,v:.4,u:' Hz'},
+  {k:'auto',l:'Auto-move magnet (or drag it yourself)',t:'chk',v:true},
+  {k:'lines',l:'Show field lines',t:'chk',v:true}],
+ btn:[['Flip magnet',()=>{M.A.st.pol*=-1}]],
+ info:'A moving magnet changes the flux through the coil. Faster motion means bigger dΦ/dt and a brighter bulb. More loops (N) means more EMF. Stop the magnet and the EMF becomes zero, because a steady flux gives no EMF. Flip the magnet to reverse the current direction. Lenz\'s law: the induced current always opposes the change in flux.',
+ init:()=>({x:4,pol:1,ph:Math.PI/2,drag:false}),
+ step(s,p,dt){if(p.auto&&!s.drag&&dt>0){s.ph+=6.2832*p.f*dt;s.x=4*Math.sin(s.ph);}
+  return p.N*s.pol*p.S*p.a*p.a/Math.pow(p.a*p.a+s.x*s.x,1.5);},
+ ex:(s,p)=>['Magnet position: '+s.x.toFixed(2)+' m from the coil centre','Drag the magnet with mouse or finger.'],
+ draw(s,p){const cx=380,cy=190,k=36,ry=p.a*k,mx=cx+s.x*k,N=p.N,x0=i=>cx+(i-(N-1)/2)*8;
+  const loop=(x,h)=>{S.beginPath();for(let i=0;i<=24;i++){const a=h*Math.PI+i/24*Math.PI,X=x+9*Math.sin(a),Y=cy-ry*Math.cos(a);i?S.lineTo(X,Y):S.moveTo(X,Y);}S.stroke();};
+  if(p.lines){S.strokeStyle='rgba(120,140,170,.55)';S.lineWidth=1.3;
+   [1.1,1.8,2.7,3.8].forEach(L=>[1,-1].forEach(sg=>{S.beginPath();
+    for(let i=0;i<=40;i++){const f=.2+i/40*(Math.PI-.4),r=L*Math.sin(f)**2,X=mx+s.pol*r*Math.cos(f)*k,Y=cy-sg*r*Math.sin(f)*k;i?S.lineTo(X,Y):S.moveTo(X,Y);}
+    S.stroke();tri(mx,cy-sg*L*k,-s.pol,'rgba(120,140,170,.95)');}));}
+  S.strokeStyle='#8a5a2b';S.lineWidth=3;for(let i=0;i<N;i++)loop(x0(i),1);
+  const n=s.pol>0;S.fillStyle=n?'#d94b4b':'#2a6fd6';S.fillRect(mx-40,cy-14,40,28);
+  S.fillStyle=n?'#2a6fd6':'#d94b4b';S.fillRect(mx,cy-14,40,28);
+  S.fillStyle='#fff';S.font='bold 16px sans-serif';S.textAlign='center';S.fillText(n?'S':'N',mx-20,cy+6);S.fillText(n?'N':'S',mx+20,cy+6);S.textAlign='left';
+  S.strokeStyle='#d08a3a';S.lineWidth=3;for(let i=0;i<N;i++)loop(x0(i),0);
+  S.strokeStyle=css('--mute');S.lineWidth=2;S.beginPath();
+  S.moveTo(x0(0),cy+ry);S.lineTo(x0(0),380);S.lineTo(610,380);S.lineTo(610,356);
+  S.moveTo(x0(N-1),cy+ry);S.lineTo(x0(N-1),392);S.lineTo(630,392);S.lineTo(630,356);S.stroke();
+  if(Math.abs(emf)>.02){for(let i=0;i<N;i++)for(let j=0;j<3;j++){const a=dotPh+j*2.094;
+    S.fillStyle=GREEN;S.beginPath();S.arc(x0(i)+9*Math.sin(a),cy-ry*Math.cos(a),3.2,0,7);S.fill();}
+   const sg=Math.sign(emf);arrow(cx-28*sg,cy-ry-22,56*sg,0,GREEN);label('Induced B',cx-30,cy-ry-32,GREEN);}
+  bulb(620,335);gauge(700,340);label('Bulb',607,378+30,css('--mute'));}},
+B:{name:'Generator (rotating coil)',
+ ctl:[{k:'B',l:'Magnetic field B',min:.1,max:2,s:.1,v:.8,u:' T'},
+  {k:'w',l:'Angular speed ω',min:.5,max:12,s:.5,v:4,u:' rad/s'},
+  {k:'N',l:'Number of turns N',min:1,max:50,s:1,v:20},
+  {k:'A',l:'Coil area A',min:.01,max:.1,s:.01,v:.05,u:' m²'},
+  {k:'R',l:'Load resistance',min:1,max:50,s:1,v:10,u:' Ω'},
+  {k:'rot',l:'Rotate coil',t:'chk',v:true},
+  {k:'ang',l:'Manual angle θ (when not rotating)',min:0,max:360,s:5,v:0,u:'°'}],
+ btn:[],
+ info:'The flux through a rotating coil is Φ = N·B·A·cosθ. EMF is the slope of the flux graph, so ε = N·B·A·ω·sinθ. EMF is maximum when the coil is parallel to the field (θ = 90°, flux changing fastest) and zero when the coil faces the field (θ = 0°, flux at its peak). That is why EMF and flux are 90° out of phase, which gives AC. Try ω = 0 and move θ by hand.',
+ init:()=>({th:0}),
+ step(s,p,dt){if(p.rot)s.th+=p.w*dt;else s.th=p.ang*Math.PI/180;return p.N*p.B*p.A*Math.cos(s.th);},
+ ex:(s,p)=>['θ = '+(((s.th*180/Math.PI)%360+360)%360).toFixed(0)+'°','Peak EMF = N·B·A·ω = '+(p.N*p.B*p.A*p.w).toFixed(2)+' V','Frequency = '+(p.w/6.2832).toFixed(2)+' Hz'],
+ draw(s,p){const cx=300,cy=190,th=s.th,c=Math.cos(th),sn=Math.sin(th);
+  S.strokeStyle='rgba(60,110,200,'+(.2+.3*p.B/2)+')';S.lineWidth=1.5+p.B;
+  for(let y=70;y<=310;y+=48){S.beginPath();S.moveTo(70,y);S.lineTo(540,y);S.stroke();for(let x=130;x<540;x+=130)tri(x,y,1,'rgba(60,110,200,.9)');}
+  label('B → (uniform field)',70,50,BLUE);
+  const dx=-sn*80,dy=-c*80;
+  S.strokeStyle='rgba(120,140,160,.6)';S.setLineDash([4,5]);S.lineWidth=1;
+  [[cx+dx,cy+dy],[cx-dx,cy-dy]].forEach(q=>{S.beginPath();S.moveTo(q[0],q[1]);S.lineTo(cx+150,q[1]);S.stroke();});S.setLineDash([]);
+  S.strokeStyle='#c8803a';S.lineWidth=7;S.lineCap='round';S.beginPath();S.moveTo(cx-dx,cy-dy);S.lineTo(cx+dx,cy+dy);S.stroke();S.lineCap='butt';
+  arrow(cx,cy,c*60,-sn*60,'#7a3fc4');label('normal n',cx+c*60+6,cy-sn*60-4,'#7a3fc4');
+  S.strokeStyle=css('--ink');S.lineWidth=1.5;S.beginPath();S.arc(cx,cy,34,0,-((th%6.2832)),th%6.2832>0);S.stroke();
+  S.fillStyle=css('--ink');S.beginPath();S.arc(cx,cy,4,0,7);S.fill();
+  const h=80*Math.abs(c);S.strokeStyle=BLUE;S.lineWidth=6;S.beginPath();S.moveTo(cx+150,cy-h);S.lineTo(cx+150,cy+h);S.stroke();
+  label('Effective area ∝ |cosθ|',cx+120,cy+110,BLUE);label('Flux = N·B·A·cosθ',cx+120,cy+128,BLUE);
+  bulb(620,335);gauge(700,340);label('Load',606,378,css('--mute'));}},
+C:{name:'Changing field (loop)',
+ ctl:[{k:'B0',l:'Field amplitude B₀',min:.1,max:2,s:.1,v:1,u:' T'},
+  {k:'wave',l:'Field waveform',t:'sel',o:[['sine','Sine (AC)'],['tri','Triangle'],['ramp','Ramp / hold / ramp'],['const','Constant (no change)']],v:'sine'},
+  {k:'f',l:'Frequency',min:.1,max:2,s:.1,v:.5,u:' Hz'},
+  {k:'r',l:'Loop radius (field region = 1 m)',min:.3,max:1.8,s:.1,v:1.2,u:' m'},
+  {k:'N',l:'Number of turns N',min:1,max:20,s:1,v:1},
+  {k:'R',l:'Loop resistance',min:1,max:20,s:1,v:5,u:' Ω'}],
+ btn:[],
+ info:'A loop sits around a region where B changes with time. EMF depends on how fast flux changes: ε = −N·A·dB/dt. With a constant B, ε = 0. A loop bigger than the field region gains no extra flux, because only the area with field counts. When B (out of the page) rises, the induced current is clockwise to oppose it. When B falls, the current is counter-clockwise.',
+ init:()=>({B:0}),
+ step(s,p,dt,T){const u=p.f*T;let b;
+  if(p.wave==='sine')b=Math.sin(6.2832*u);
+  else if(p.wave==='tri')b=2/Math.PI*Math.asin(Math.sin(6.2832*u));
+  else if(p.wave==='ramp'){const q=((u%1)+1)%1;b=q<.3?q/.3:q<.5?1:q<.8?1-(q-.5)/.3:0;}
+  else b=1;
+  s.B=p.B0*b;const Re=Math.min(p.r,1);return p.N*s.B*Math.PI*Re*Re;},
+ ex:(s,p)=>['B(t) = '+s.B.toFixed(2)+' T  ('+(s.B>=0?'out of page':'into page')+')','Area with field used: π·min(r,1)² = '+(Math.PI*Math.min(p.r,1)**2).toFixed(2)+' m²'],
+ draw(s,p){const cx=300,cy=200,k=90;
+  S.strokeStyle=css('--mute');S.setLineDash([5,5]);S.lineWidth=1.5;S.beginPath();S.arc(cx,cy,k,0,7);S.stroke();S.setLineDash([]);
+  const amp=clamp(Math.abs(s.B)/2,0,1);
+  if(amp>.01)for(let x=-k;x<=k;x+=20)for(let y=-k;y<=k;y+=20){if(x*x+y*y>k*k-100)continue;
+   S.strokeStyle=S.fillStyle=BLUE;S.lineWidth=1.6;const q=2+5*amp;
+   if(s.B>0){S.beginPath();S.arc(cx+x,cy+y,q,0,7);S.fill();}
+   else{S.beginPath();S.moveTo(cx+x-q,cy+y-q);S.lineTo(cx+x+q,cy+y+q);S.moveTo(cx+x+q,cy+y-q);S.lineTo(cx+x-q,cy+y+q);S.stroke();}}
+  label('Field region (B '+(s.B>=0?'• out of page':'× into page')+')',cx-k-10,cy-k-14,BLUE);
+  const r=p.r*k;S.strokeStyle='#c8803a';S.lineWidth=5;S.beginPath();S.arc(cx,cy,r,0,7);S.stroke();
+  if(Math.abs(emf)>.02){const sg=Math.sign(emf);for(let j=0;j<8;j++){const a=dotPh+j*.785;
+    S.fillStyle=GREEN;S.beginPath();S.arc(cx+r*Math.cos(a),cy-r*Math.sin(a),4,0,7);S.fill();}
+   label('Induced current: '+(sg>0?'counter-clockwise':'clockwise'),cx-80,cy+r+22,GREEN);}
+  bulb(620,335);gauge(700,340);label('Load',606,378,css('--mute'));}},
+D:{name:'Moving rod (motional EMF)',
+ ctl:[{k:'B',l:'Magnetic field B (into page)',min:.2,max:2,s:.1,v:1,u:' T'},
+  {k:'L',l:'Rod length L',min:.5,max:2,s:.1,v:1.4,u:' m'},
+  {k:'R',l:'Circuit resistance',min:1,max:20,s:1,v:5,u:' Ω'},
+  {k:'m',l:'Rod mass',min:.2,max:5,s:.1,v:1,u:' kg'},
+  {k:'F',l:'Applied pulling force',min:0,max:10,s:.5,v:0,u:' N'},
+  {k:'v0',l:'Initial speed (used on Reset)',min:0,max:6,s:.5,v:3,u:' m/s'}],
+ btn:[],
+ info:'A rod slides on rails inside a field B (into the page). The loop area grows, so the flux grows: Φ = B·L·x, and ε = B·L·v. The induced current I = ε/R feels a magnetic force F = B·I·L that opposes the motion (Lenz\'s law, energy conservation). With no applied force the rod slows down. With a pulling force it reaches a terminal speed v = F·R/(B²L²). Electrical power equals the mechanical work done against this force.',
+ init:p=>({x:.2,v:p.v0,end:false}),
+ step(s,p,dt){if(dt>0&&!s.end){const k=p.B*p.B*p.L*p.L/p.R,n=8,h=dt/n;
+   for(let i=0;i<n;i++){s.v+=(p.F-k*s.v)/p.m*h;s.x+=s.v*h;}
+   if(s.x>=7.4){s.x=7.4;s.v=0;s.end=true;}}
+  return -p.B*p.L*s.x;},
+ ex:(s,p)=>{const k=p.B*p.B*p.L*p.L/p.R;return['Rod speed v = '+s.v.toFixed(2)+' m/s','Braking force B²L²v/R = '+(k*s.v).toFixed(2)+' N',
+  p.F>0?'Terminal speed = F·R/(B²L²) = '+(p.F/k).toFixed(2)+' m/s':'No applied force: speed decays exponentially',
+  s.end?'Rod reached the end. Press Reset.':'Flux is taken positive out of the page, so it is negative here.'];},
+ draw(s,p){const k=80,x0=60,top=110,bot=top+p.L*k,rx=x0+s.x*k,mid=(top+bot)/2;
+  S.strokeStyle=BLUE;S.lineWidth=1.6;
+  for(let x=x0+30;x<=700;x+=40)for(let y=top+22;y<bot;y+=40){S.globalAlpha=.55;S.beginPath();S.moveTo(x-4,y-4);S.lineTo(x+4,y+4);S.moveTo(x+4,y-4);S.lineTo(x-4,y+4);S.stroke();}
+  S.globalAlpha=1;label('B into page (×)',x0+10,top-30,BLUE);
+  S.fillStyle='rgba(42,111,214,.13)';S.fillRect(x0,top,rx-x0,bot-top);
+  S.strokeStyle=css('--ink');S.lineWidth=4;S.beginPath();S.moveTo(x0,top);S.lineTo(700,top);S.moveTo(x0,bot);S.lineTo(700,bot);S.moveTo(x0,top);S.lineTo(x0,bot);S.stroke();
+  bulb(x0,mid);
+  S.strokeStyle='#c8803a';S.lineWidth=9;S.beginPath();S.moveTo(rx,top-8);S.lineTo(rx,bot+8);S.stroke();
+  if(Math.abs(emf)>.02){const per=2*((bot-top)+(rx-x0));
+   for(let j=0;j<14;j++){let u=((dotPh/6.2832*per*.25+j*per/14)%per+per)%per;if(emf<0)u=per-u;
+    const A=bot-top,Bd=rx-x0;let X,Y;
+    if(u<A){X=x0;Y=top+u;}else if(u<A+Bd){X=x0+(u-A);Y=bot;}else if(u<2*A+Bd){X=rx;Y=bot-(u-A-Bd);}else{X=rx-(u-2*A-Bd);Y=top;}
+    S.fillStyle=GREEN;S.beginPath();S.arc(X,Y,3.5,0,7);S.fill();}}
+  const kk=p.B*p.B*p.L*p.L/p.R;
+  arrow(rx+8,mid,Math.max(0,s.v*14),0,GREEN,4);label('v',rx+12,mid-8,GREEN);
+  if(p.F>0){arrow(rx+8,mid-26,p.F*8,0,BLUE,4);label('F applied',rx+12,mid-32,BLUE);}
+  if(kk*s.v>.05){arrow(rx-8,mid+26,-kk*s.v*8,0,RED,4);label('F magnetic (brakes)',rx-130,mid+46,RED);}
+  gauge(700,340);label('Area of the loop = L·x grows, so flux grows',x0+10,bot+44,css('--mute'));}}
+};
+Object.keys(M).forEach(k=>{const m=M[k];m.p={};m.ctl.forEach(c=>m.p[c.k]=c.v);m.st=m.init(m.p);});
+
+function build(){const m=M[mode],box=$('ctl');box.innerHTML='';
+  m.ctl.forEach(c=>{const d=document.createElement('label');
+    if(c.t==='chk'){d.className='chk';d.innerHTML='<input type="checkbox" '+(m.p[c.k]?'checked':'')+'> '+c.l;d.firstChild.onchange=e=>m.p[c.k]=e.target.checked;}
+    else if(c.t==='sel'){d.innerHTML='<div>'+c.l+'</div><select>'+c.o.map(o=>'<option value="'+o[0]+'"'+(m.p[c.k]===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>';
+      d.querySelector('select').onchange=e=>m.p[c.k]=e.target.value;}
+    else{d.innerHTML='<div class="row"><span>'+c.l+'</span><b>'+m.p[c.k]+(c.u||'')+'</b></div><input type="range" min="'+c.min+'" max="'+c.max+'" step="'+c.s+'" value="'+m.p[c.k]+'">';
+      const inp=d.querySelector('input'),b=d.querySelector('b');
+      inp.oninput=()=>{m.p[c.k]=+inp.value;b.textContent=inp.value+(c.u||'');};}
+    box.appendChild(d);});
+  const bb=$('btns');bb.innerHTML='';m.btn.forEach(b=>{const e=document.createElement('button');e.textContent=b[0];e.onclick=b[1];bb.appendChild(e);});
+  $('info').textContent=m.info;
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.k===mode));}
+function resetMode(){const m=M[mode];m.st=m.init(m.p);T=0;buf=[];prevPhi=null;emf=0;ref=.3;dotPh=0;}
+function setMode(k){mode=k;resetMode();build();}
+Object.keys(M).forEach(k=>{const b=document.createElement('button');b.textContent=M[k].name;b.dataset.k=k;b.onclick=()=>setMode(k);$('tabs').appendChild(b);});
+$('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Resume':'Pause';};
+$('reset').onclick=resetMode;
+$('ts').oninput=e=>$('vts').textContent=e.target.value+'×';
+
+// drag magnet (mode A)
+function pos(e){const r=sc.getBoundingClientRect();return[(e.clientX-r.left)*SW/r.width,(e.clientY-r.top)*SH/r.height];}
+sc.addEventListener('pointerdown',e=>{if(mode!=='A')return;const s=M.A.st,[x,y]=pos(e);if(Math.abs(x-(380+s.x*36))<50&&Math.abs(y-190)<40){s.drag=true;sc.setPointerCapture(e.pointerId);}});
+sc.addEventListener('pointermove',e=>{const s=M.A.st;if(mode==='A'&&s.drag)s.x=clamp((pos(e)[0]-380)/36,-6,6);});
+sc.addEventListener('pointerup',()=>{const s=M.A.st;if(s.drag){s.drag=false;s.ph=Math.asin(clamp(s.x/4,-1,1));}});
+
+function drawGraph(){G.fillStyle=css('--scene');G.fillRect(0,0,GW,GH);
+  const L=52,Rr=GW-52,t=22,b=GH-24,mid=(t+b)/2,w=8,t0=T-w;
+  let mp=.05,me=.05;buf.forEach(a=>{mp=Math.max(mp,Math.abs(a[1]));me=Math.max(me,Math.abs(a[2]));});
+  G.strokeStyle=css('--line');G.lineWidth=1;G.fillStyle=css('--mute');G.font='11px sans-serif';G.textAlign='center';
+  for(let s=Math.ceil(Math.max(0,t0));s<=T;s++){const x=L+(s-t0)/w*(Rr-L);G.beginPath();G.moveTo(x,t);G.lineTo(x,b);G.stroke();G.fillText(s+' s',x,GH-8);}
+  G.strokeStyle=css('--mute');G.beginPath();G.moveTo(L,mid);G.lineTo(Rr,mid);G.stroke();
+  const tr=(i,mx,col)=>{G.strokeStyle=col;G.lineWidth=2.2;G.beginPath();buf.forEach((a,j)=>{const x=L+(a[0]-t0)/w*(Rr-L),y=mid-a[i]/mx*(mid-t-4);j?G.lineTo(x,y):G.moveTo(x,y);});G.stroke();};
+  tr(1,mp,BLUE);tr(2,me,RED);
+  G.textAlign='right';G.fillStyle=BLUE;G.fillText('+'+mp.toFixed(1),L-4,t+8);G.fillText('−'+mp.toFixed(1),L-4,b);
+  G.textAlign='left';G.fillStyle=RED;G.fillText('+'+me.toFixed(1),Rr+4,t+8);G.fillText('−'+me.toFixed(1),Rr+4,b);
+  G.font='bold 12px sans-serif';G.fillStyle=BLUE;G.fillText('Flux linkage NΦ',L+6,14);G.fillStyle=RED;G.fillText('EMF ε = −dΦ/dt (slope of the blue line)',L+130,14);}
+
+let last=performance.now();
+function tick(now){const m=M[mode];
+  let dt=Math.min(.033,(now-last)/1000)*(+$('ts').value);last=now;if(paused)dt=0;
+  T+=dt;phi=m.step(m.st,m.p,dt,T);
+  if(dt>0){if(prevPhi!==null)emf+=(-(phi-prevPhi)/dt-emf)*.5;prevPhi=phi;
+    buf.push([T,phi,emf]);while(buf.length&&buf[0][0]<T-8.5)buf.shift();
+    ref=Math.max(ref*.998,Math.abs(emf),.3);
+    if(Math.abs(emf)>.02)dotPh+=Math.sign(emf)*clamp(Math.abs(emf/m.p.R)*2,.8,9)*dt;}
+  const I=emf/m.p.R;
+  $('rPhi').textContent=phi.toFixed(2)+' Wb';$('rE').textContent=emf.toFixed(2)+' V';
+  $('rI').textContent=I.toFixed(2)+' A';$('rP').textContent=(emf*I).toFixed(2)+' W';
+  $('extra').innerHTML=m.ex(m.st,m.p).join('<br>');
+  const inc=(-emf*Math.sign(phi||1))>0;
+  $('status').textContent=Math.abs(emf)<.05?'Flux is steady, so ε ≈ 0 and no current flows.':
+    inc?'Flux is increasing, so the induced current opposes it (Lenz\'s law).':'Flux is decreasing, so the induced current tries to maintain it.';
+  S.fillStyle=css('--scene');S.fillRect(0,0,SW,SH);m.draw(m.st,m.p);drawGraph();
+  requestAnimationFrame(tick);}
+build();requestAnimationFrame(tick);
+</script>
+</body>
+</html>

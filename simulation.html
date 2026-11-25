@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projectile Motion Simulator</title>
+<style>
+:root{--bg:#eef3f7;--panel:#fff;--ink:#17222d;--mute:#5d6b78;--line:#d5dde5;--accent:#1f6fb2;--sky1:#cfe8fb;--sky2:#f2f9ff;--grass:#6aa84f;--dirt:#8a6b4a}
+@media (prefers-color-scheme:dark){:root{--bg:#10161c;--panel:#1a232c;--ink:#e8eef4;--mute:#9aa8b5;--line:#2c3945;--accent:#5aa9e6;--sky1:#1d3347;--sky2:#26445c;--grass:#3f7a35;--dirt:#5a4631}}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Trebuchet MS","Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+.app{display:grid;grid-template-columns:1fr 300px;gap:12px;padding:12px;max-width:1200px;margin:auto}
+@media(max-width:860px){.app{grid-template-columns:1fr}}
+h1{font-size:20px;margin:0 0 8px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
+canvas{width:100%;height:auto;display:block;border-radius:6px;touch-action:none;cursor:crosshair}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.panel h2{font-size:15px;margin:0}
+label{font-size:13px;display:block}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+input[type=range]{width:100%;accent-color:var(--accent)}
+select,button{font:inherit;font-size:14px;padding:7px 10px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+button{cursor:pointer}
+button.fire{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:bold}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btns button{flex:1}
+.data{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px}
+.data div{background:var(--bg);border-radius:6px;padding:6px 8px}
+.data b{display:block;font-size:16px}
+.chk{display:flex;gap:6px;align-items:center;font-size:13px}
+.msg{font-size:13px;min-height:18px;color:var(--accent);font-weight:bold}
+</style>
+</head>
+<body>
+<div class="app">
+  <div>
+    <h1>Projectile Motion</h1>
+    <div class="stage"><canvas id="c" width="1000" height="560"></canvas></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div class="panel">
+    <h2>Launcher</h2>
+    <label>Object
+      <select id="obj">
+        <option value="cannonball">Cannonball</option>
+        <option value="tank">Tank shell</option>
+        <option value="golf">Golf ball</option>
+        <option value="baseball">Baseball</option>
+        <option value="football">Football</option>
+        <option value="pumpkin">Pumpkin</option>
+        <option value="human">Human</option>
+        <option value="piano">Piano</option>
+        <option value="car">Car</option>
+        <option value="custom">Custom</option>
+      </select>
+    </label>
+    <label><div class="row"><span>Angle</span><b id="vAng"></b></div><input id="ang" type="range" min="-10" max="90" step="1" value="45"></label>
+    <label><div class="row"><span>Speed</span><b id="vSpd"></b></div><input id="spd" type="range" min="1" max="40" step="0.5" value="18"></label>
+    <label><div class="row"><span>Launch height</span><b id="vH"></b></div><input id="h0" type="range" min="0" max="30" step="0.5" value="0"></label>
+    <label><div class="row"><span>Mass</span><b id="vM"></b></div><input id="mass" type="range" min="0.05" max="1000" step="0.05" value="5.35"></label>
+    <label><div class="row"><span>Diameter</span><b id="vD"></b></div><input id="dia" type="range" min="0.05" max="2" step="0.01" value="0.18"></label>
+    <label><div class="row"><span>Gravity</span><b id="vG"></b></div><input id="g" type="range" min="1" max="25" step="0.1" value="9.8"></label>
+    <label class="chk"><input id="drag" type="checkbox"> Air resistance (drag)</label>
+    <label><div class="row"><span>Drag coefficient</span><b id="vCd"></b></div><input id="cd" type="range" min="0.1" max="1.5" step="0.05" value="0.47"></label>
+    <label><div class="row"><span>Speed of simulation</span><b id="vT"></b></div><input id="ts" type="range" min="0.1" max="2" step="0.1" value="1"></label>
+    <div class="btns"><button class="fire" id="fire">Fire</button><button id="clear">Clear</button><button id="pause">Pause</button></div>
+    <label class="chk"><input id="vec" type="checkbox" checked> Velocity vectors</label>
+    <label class="chk"><input id="acc" type="checkbox"> Acceleration vector</label>
+    <label class="chk"><input id="pred" type="checkbox" checked> Show path preview</label>
+    <label class="chk"><input id="tape" type="checkbox"> Tape measure (drag to measure)</label>
+    <button id="tgt">Move target</button>
+    <h2>Last shot</h2>
+    <div class="data">
+      <div>Range<b id="dR">–</b></div>
+      <div>Max height<b id="dH">–</b></div>
+      <div>Flight time<b id="dT">–</b></div>
+      <div>Impact speed<b id="dV">–</b></div>
+      <div>x<b id="dx">–</b></div>
+      <div>y<b id="dy">–</b></div>
+      <div>vx<b id="dvx">–</b></div>
+      <div>vy<b id="dvy">–</b></div>
+    </div>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('c'),ctx=cv.getContext('2d');
+const W=cv.width,H=cv.height,GROUND=H-60,LEFT=70;
+const OBJ={ // mass kg, diameter m, drag coeff
+  cannonball:[17.6,.18,.47],tank:[15,.15,.3],golf:[.046,.043,.3],baseball:[.145,.074,.35],
+  football:[.41,.22,.5],pumpkin:[5,.5,.47],human:[70,.5,1.0],piano:[400,1.0,1.1],car:[1000,1.8,.8]};
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let scale=12; // pixels per metre (auto-adjusted)
+let shots=[],paused=false,target={x:60,r:2.5},tapeOn=false,tape=null,last=null;
+
+function params(){return{ang:+$('ang').value,v:+$('spd').value,h:+$('h0').value,m:+$('mass').value,d:+$('dia').value,g:+$('g').value,
+  drag:$('drag').checked,cd:+$('cd').value};}
+function updLabels(){const p=params();
+  $('vAng').textContent=p.ang+'°';$('vSpd').textContent=p.v+' m/s';$('vH').textContent=p.h+' m';
+  $('vM').textContent=p.m.toFixed(2)+' kg';$('vD').textContent=p.d.toFixed(2)+' m';$('vG').textContent=p.g+' m/s²';
+  $('vCd').textContent=p.cd;$('vT').textContent=(+$('ts').value)+'×';
+  $('cd').disabled=!p.drag;}
+function setObject(){const o=$('obj').value;if(o==='custom')return;const[m,d,cd]=OBJ[o];
+  $('mass').value=m;$('dia').value=d;$('cd').value=cd;updLabels();draw();}
+function accel(s,p){ // returns [ax,ay]
+  let ax=0,ay=-p.g;
+  if(p.drag){const sp=Math.hypot(s.vx,s.vy),A=Math.PI*(p.d/2)**2,k=0.5*1.225*p.cd*A/p.m;
+    ax-=k*sp*s.vx;ay-=k*sp*s.vy;}
+  return[ax,ay];}
+function step(s,p,dt){ // RK4
+  const f=q=>{const a=accel(q,p);return[q.vx,q.vy,a[0],a[1]];};
+  const k1=f(s),
+  k2=f({vx:s.vx+k1[2]*dt/2,vy:s.vy+k1[3]*dt/2}),
+  k3=f({vx:s.vx+k2[2]*dt/2,vy:s.vy+k2[3]*dt/2}),
+  k4=f({vx:s.vx+k3[2]*dt,vy:s.vy+k3[3]*dt});
+  s.x+=dt/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+  s.y+=dt/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+  s.vx+=dt/6*(k1[2]+2*k2[2]+2*k3[2]+k4[2]);
+  s.vy+=dt/6*(k1[3]+2*k2[3]+2*k3[3]+k4[3]);}
+function newShot(p){const a=p.ang*Math.PI/180;
+  return{p,x:0,y:p.h,vx:p.v*Math.cos(a),vy:p.v*Math.sin(a),t:0,maxY:p.h,path:[[0,p.h]],done:false,ax:0,ay:-p.g};}
+function preview(p){const s=newShot(p),pts=[[s.x,s.y]];
+  for(let i=0;i<4000&&(s.y>=0||i<2);i++){step(s,p,0.02);pts.push([s.x,s.y]);if(s.y<0)break;}
+  return pts;}
+function fit(){ // choose scale so preview path and target fit
+  const p=params(),pts=preview(p);let mx=target.x+10,my=p.h+5;
+  pts.forEach(q=>{mx=Math.max(mx,q[0]);my=Math.max(my,q[1]);});
+  scale=Math.min((W-LEFT-40)/mx,(GROUND-40)/my);scale=Math.max(1,Math.min(scale,60));}
+const X=x=>LEFT+x*scale,Y=y=>GROUND-y*scale;
+
+function fire(){fit();const p=params();shots.push(newShot(p));if(shots.length>6)shots.shift();$('msg').textContent='';}
+function finish(s){s.done=true;const g=s.p.g;
+  last={range:s.x,max:s.maxY,time:s.t,vimp:Math.hypot(s.vx,s.vy)};
+  $('dR').textContent=s.x.toFixed(2)+' m';$('dH').textContent=s.maxY.toFixed(2)+' m';
+  $('dT').textContent=s.t.toFixed(2)+' s';$('dV').textContent=last.vimp.toFixed(2)+' m/s';
+  if(Math.abs(s.x-target.x)<=target.r)$('msg').textContent='Target hit! Range '+s.x.toFixed(1)+' m';
+  else $('msg').textContent='Missed by '+Math.abs(s.x-target.x).toFixed(1)+' m';}
+function update(dt){
+  shots.forEach(s=>{if(s.done)return;
+    const n=Math.ceil(dt/0.005),h=dt/n;
+    for(let i=0;i<n&&!s.done;i++){
+      const px=s.x,py=s.y;step(s,s.p,h);s.t+=h;
+      if(s.y>s.maxY)s.maxY=s.y;
+      if(s.y<0&&s.t>h*1.5){const f=py/(py-s.y);s.x=px+(s.x-px)*f;s.y=0;s.path.push([s.x,0]);finish(s);break;}
+    }
+    if(!s.done){const a=accel(s,s.p);s.ax=a[0];s.ay=a[1];if(s.path.length<20000)s.path.push([s.x,s.y]);}
+  });
+  const s=shots[shots.length-1];
+  if(s&&!s.done){$('dx').textContent=s.x.toFixed(2)+' m';$('dy').textContent=s.y.toFixed(2)+' m';
+    $('dvx').textContent=s.vx.toFixed(2);$('dvy').textContent=s.vy.toFixed(2);}
+}
+function arrow(x,y,dx,dy,col){const l=Math.hypot(dx,dy);if(l<3)return;
+  ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y+dy);ctx.stroke();
+  const a=Math.atan2(dy,dx);ctx.beginPath();ctx.moveTo(x+dx,y+dy);
+  ctx.lineTo(x+dx-9*Math.cos(a-.4),y+dy-9*Math.sin(a-.4));ctx.lineTo(x+dx-9*Math.cos(a+.4),y+dy-9*Math.sin(a+.4));ctx.fill();}
+function draw(){
+  const g=ctx.createLinearGradient(0,0,0,GROUND);g.addColorStop(0,css('--sky1'));g.addColorStop(1,css('--sky2'));
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=css('--grass');ctx.fillRect(0,GROUND,W,14);
+  ctx.fillStyle=css('--dirt');ctx.fillRect(0,GROUND+14,W,H);
+  // ruler ticks
+  ctx.fillStyle=css('--ink');ctx.font='12px sans-serif';ctx.textAlign='center';
+  let stepM=[1,2,5,10,20,50,100].find(v=>v*scale>=60)||100;
+  for(let m=0;X(m)<W;m+=stepM){ctx.fillRect(X(m),GROUND+14,1,8);ctx.fillText(m+' m',X(m),GROUND+38);}
+  // vertical axis ticks
+  ctx.textAlign='left';
+  for(let m=stepM;Y(m)>10;m+=stepM){ctx.fillStyle='rgba(120,140,160,.25)';ctx.fillRect(LEFT,Y(m),W,1);ctx.fillStyle=css('--ink');ctx.fillText(m+' m',4,Y(m)-3);}
+  // target
+  ctx.fillStyle='#d94b4b';ctx.fillRect(X(target.x-target.r),GROUND-5,target.r*2*scale,5);
+  [1,.6,.25].forEach((f,i)=>{ctx.fillStyle=i%2?'#fff':'#d94b4b';ctx.beginPath();ctx.ellipse(X(target.x),GROUND,target.r*scale*f,Math.min(10,target.r*scale*f*.5),0,Math.PI,0,true);ctx.fill();});
+  // cannon
+  const p=params(),a=-p.ang*Math.PI/180;
+  ctx.save();ctx.translate(X(0),Y(p.h));ctx.rotate(a);ctx.fillStyle='#4a5560';ctx.fillRect(-10,-9,52,18);ctx.restore();
+  ctx.fillStyle='#2f3840';ctx.beginPath();ctx.arc(X(0),Y(p.h),14,0,7);ctx.fill();
+  if(p.h>0){ctx.fillStyle='#7d8791';ctx.fillRect(X(0)-12,Y(p.h)+10,24,GROUND-Y(p.h)-10);}
+  // preview
+  if($('pred').checked&&!shots.some(s=>!s.done)){const pts=preview(p);ctx.setLineDash([6,6]);ctx.strokeStyle='rgba(31,111,178,.6)';ctx.lineWidth=2;
+    ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(X(q[0]),Y(Math.max(0,q[1]))):ctx.moveTo(X(q[0]),Y(q[1])));ctx.stroke();ctx.setLineDash([]);}
+  // shots
+  shots.forEach((s,i)=>{
+    ctx.strokeStyle=s.done?'rgba(80,90,100,.55)':'#e07b1f';ctx.lineWidth=2;ctx.beginPath();
+    s.path.forEach((q,j)=>j?ctx.lineTo(X(q[0]),Y(q[1])):ctx.moveTo(X(q[0]),Y(q[1])));ctx.stroke();
+    const r=Math.max(5,s.p.d*scale/2);
+    ctx.fillStyle='#222';ctx.beginPath();ctx.arc(X(s.x),Y(s.y),r,0,7);ctx.fill();
+    if(!s.done){
+      if($('vec').checked){arrow(X(s.x),Y(s.y),s.vx*4,-s.vy*4,'#1b8a3a');
+        arrow(X(s.x),Y(s.y),s.vx*4,0,'#2a6fd6');arrow(X(s.x),Y(s.y),0,-s.vy*4,'#c23030');}
+      if($('acc').checked)arrow(X(s.x),Y(s.y),s.ax*6,-s.ay*6,'#8a2be2');}
+    else{
+      let top=s.path.reduce((b,q)=>q[1]>b[1]?q:b,[0,-1]);ctx.strokeStyle='#888';ctx.setLineDash([3,4]);
+      ctx.beginPath();ctx.moveTo(X(top[0]),Y(top[1]));ctx.lineTo(X(top[0]),GROUND);ctx.stroke();ctx.setLineDash([]);}
+  });
+  // tape measure
+  if(tape){ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(tape.x1,tape.y1);ctx.lineTo(tape.x2,tape.y2);ctx.stroke();
+    const dx=(tape.x2-tape.x1)/scale,dy=-(tape.y2-tape.y1)/scale;
+    ctx.fillStyle='#111';ctx.font='bold 13px sans-serif';ctx.textAlign='left';
+    ctx.fillText(Math.hypot(dx,dy).toFixed(2)+' m (Δx '+dx.toFixed(1)+', Δy '+dy.toFixed(1)+')',tape.x2+8,tape.y2-8);}
+  // legend
+  if($('vec').checked){ctx.font='12px sans-serif';ctx.textAlign='left';
+    [['velocity','#1b8a3a'],['vx','#2a6fd6'],['vy','#c23030']].forEach((l,i)=>{ctx.fillStyle=l[1];ctx.fillRect(W-110,12+i*18,14,4);ctx.fillStyle=css('--ink');ctx.fillText(l[0],W-90,18+i*18);});}
+}
+let prev=performance.now();
+function loop(t){const dt=Math.min(0.05,(t-prev)/1000);prev=t;
+  if(!paused)update(dt*(+$('ts').value));draw();requestAnimationFrame(loop);}
+
+// events
+['ang','spd','h0','mass','dia','g','cd','ts','drag'].forEach(id=>$(id).addEventListener('input',e=>{
+  if(['mass','dia','cd'].includes(id))$('obj').value='custom';updLabels();if(!shots.some(s=>!s.done))fit();}));
+$('obj').addEventListener('change',()=>{setObject();fit();});
+$('fire').onclick=fire;
+$('clear').onclick=()=>{shots=[];last=null;$('msg').textContent='';['dR','dH','dT','dV','dx','dy','dvx','dvy'].forEach(i=>$(i).textContent='–');fit();};
+$('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Resume':'Pause';};
+$('tape').onchange=e=>{tapeOn=e.target.checked;if(!tapeOn)tape=null;};
+$('tgt').onclick=()=>{target.x=20+Math.random()*80;fit();};
+function pos(e){const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height];}
+let drag=false;
+cv.addEventListener('pointerdown',e=>{if(!tapeOn)return;drag=true;const[x,y]=pos(e);tape={x1:x,y1:y,x2:x,y2:y};});
+cv.addEventListener('pointermove',e=>{if(!drag)return;const[x,y]=pos(e);tape.x2=x;tape.y2=y;});
+addEventListener('pointerup',()=>drag=false);
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if(e.code==='Space'){e.preventDefault();fire();}});
+setObject();updLabels();fit();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
