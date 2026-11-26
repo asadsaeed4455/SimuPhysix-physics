@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projectile Motion | SimuPhysix Mechanics Lab</title>
+<style>
+:root{--bg:#050c1f;--bg2:#091531;--card:#0e1b3d;--line:#233769;--ink:#e8eeff;--mute:#9bb0dc;--cy:#38d0ff;--am:#ffb347;--rd:#ff6b81;--gn:#4ade80;--ac:#3b82f6}
+*{box-sizing:border-box}html{color-scheme:dark;scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#12275a 0,var(--bg) 60%) fixed;color:var(--ink);font:16px/1.6 "Segoe UI",system-ui,Roboto,Arial,sans-serif;font-variant-numeric:tabular-nums}
+a{color:var(--cy)}
+.top{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 18px;background:rgba(5,12,31,.93);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:18px;color:var(--ink);text-decoration:none}.logo b{color:var(--cy)}.logo svg{width:28px;height:28px}
+.top .l,.top .r{display:flex;gap:6px;flex-wrap:wrap}.top .r{margin-left:auto}
+.pill{padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#0b1736;color:var(--ink);text-decoration:none;font-size:14px;font-weight:600}.pill:hover{border-color:var(--cy)}
+.wrap{max-width:1280px;margin:auto;padding:14px 18px}
+.hero h1{margin:6px 0 6px;font-size:30px}.crumb{color:var(--mute);font-size:13px}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:700;margin-right:6px;border:1px solid}
+.b1{color:var(--gn);border-color:rgba(74,222,128,.5);background:rgba(74,222,128,.1)}.b2{color:var(--cy);border-color:rgba(56,208,255,.5);background:rgba(56,208,255,.1)}
+.hero p{max-width:900px;color:#c9d6ff}.obj{margin:6px 0 0;padding-left:20px;color:#c9d6ff}
+.lab{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:14px;margin-top:14px}
+.left,.right{display:flex;flex-direction:column;gap:14px;min-width:0}
+@media(max-width:980px){.lab{grid-template-columns:1fr}.left,.right{display:contents}#cScene{order:1}#cCtl{order:2}#cLive{order:3}#cGraph{order:4}#cPred{order:5}}
+.card{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.card h2{margin:0 0 10px;font-size:16px}
+canvas{display:block;width:100%;border-radius:10px;background:#081230}
+.note{margin:8px 0 0;font-size:13px;color:var(--mute)}
+.msg{min-height:22px;margin-top:8px;font-weight:700;color:var(--gn);font-size:14px}
+.ctl{margin-bottom:11px}.ctl .row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:3px}.ctl output{font-weight:700;color:var(--cy)}
+input[type=range]{width:100%;accent-color:var(--ac);height:24px;margin:0}
+select,.btn{font:inherit;font-size:14px;font-weight:600;padding:8px 8px;border-radius:9px;border:1px solid var(--line);background:#0b1736;color:var(--ink);cursor:pointer}
+select{width:100%}
+.btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0 12px}.btns.two{grid-template-columns:1fr 1fr;margin:8px 0 0}
+.btn:hover{border-color:var(--cy)}.btn.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.btn:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.tile{background:#0a1632;border:1px solid var(--line);border-radius:10px;padding:6px 10px}.tile small{display:block;color:var(--mute);font-size:12px}.tile b{font-size:17px}
+.c1{color:var(--cy)}.c2{color:var(--am)}.c3{color:var(--gn)}.c4{color:var(--rd)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tab{flex:1;font:inherit;font-size:13px;font-weight:600;padding:6px 4px;border-radius:8px;border:1px solid var(--line);background:#0b1736;color:var(--mute);cursor:pointer;min-width:70px}.tab.on{background:var(--ac);border-color:var(--ac);color:#fff}
+section.sec{margin-top:22px}
+section.sec>h2{font-size:24px;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.lec h3{margin:20px 0 6px;font-size:18px;color:var(--cy)}.lec p,.lec li{color:#d3dcf5;max-width:980px}
+.eq{background:#0a1632;border:1px solid var(--line);border-left:4px solid var(--cy);border-radius:8px;padding:8px 14px;margin:8px 0;font-family:"Cambria Math","Times New Roman",serif;font-size:18px;overflow-x:auto;white-space:nowrap}
+.tw{overflow-x:auto}table.sym{border-collapse:collapse;width:100%;max-width:900px;font-size:14.5px}table.sym th,table.sym td{border:1px solid var(--line);padding:6px 10px;text-align:left}table.sym th{background:#0a1632;color:var(--cy)}
+.box{background:#0a1632;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0;max-width:980px}.box.warn{border-left:4px solid var(--rd)}.box.ok{border-left:4px solid var(--gn)}
+.ex{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;max-width:980px}
+.ex h3{margin:0 0 6px;color:var(--am)}.ex ol{margin:6px 0;padding-left:20px}.ans{color:var(--gn);font-weight:700}
+.qs{max-width:980px}.qs li{margin-bottom:8px}
+details{background:#0a1632;border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin-top:12px;max-width:980px}summary{cursor:pointer;font-weight:700;color:var(--cy)}
+footer{margin:30px 0 10px;text-align:center;color:var(--mute);font-size:13px}
+sub,sup{font-size:.7em}
+</style>
+</head>
+<body>
+<nav class="top">
+  <a class="logo" href="index.html"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#0e1b3d" stroke="#38d0ff" stroke-width="2"/><path d="M5 22 Q16 -2 27 22" fill="none" stroke="#ffb347" stroke-width="2.4"/></svg>Simu<b>Physix</b></a>
+  <div class="l"><a class="pill" href="index.html">Home</a><a class="pill" href="mechanics.html">Mechanics</a></div>
+  <div class="r"><a class="pill" href="mechanics.html">← All topics</a><a class="pill" href="free-fall.html">Next: Free Fall →</a></div>
+</nav>
+
+<div class="wrap">
+<header class="hero">
+  <div class="crumb">Mechanics › Kinematics › Topic 1 of 20</div>
+  <h1>Projectile Motion</h1>
+  <span class="badge b1">Difficulty: Beginner–Intermediate</span><span class="badge b2">Kinematics</span>
+  <p>A projectile moves under gravity alone. Its horizontal motion is uniform and its vertical motion is uniformly accelerated, and combining them gives a parabola. Use the lab below to launch objects and watch every quantity update.</p>
+  <b>Learning objectives</b>
+  <ul class="obj">
+    <li>Resolve the launch velocity into horizontal and vertical components.</li>
+    <li>Calculate time of flight, maximum height and range, including launches from a height.</li>
+    <li>Explain why the horizontal and vertical motions are independent.</li>
+    <li>Predict how angle, speed and gravity change the trajectory, and read the motion graphs.</li>
+  </ul>
+</header>
+
+<div class="lab">
+  <div class="left">
+    <section class="card" id="cScene"><h2>Laboratory</h2>
+      <canvas id="scene" aria-label="Projectile trajectory with velocity vectors"></canvas>
+      <div class="msg" id="msg"></div>
+      <p class="note">Dashed line: predicted path from the equations. Solid line: path travelled so far. Arrows: v<sub>x</sub> (cyan), v<sub>y</sub> (amber), resultant v (green).</p></section>
+    <section class="card" id="cGraph"><h2>Real-time graphs</h2>
+      <div class="tabs" id="gtabs"><button class="tab on" data-g="pos">Position</button><button class="tab" data-g="vel">Velocity</button><button class="tab" data-g="acc">Acceleration</button><button class="tab" data-g="en">Energy / kg</button></div>
+      <canvas id="graph" aria-label="Motion graph"></canvas>
+      <p class="note" id="gnote"></p></section>
+  </div>
+  <div class="right">
+    <section class="card" id="cCtl"><h2>Controls</h2>
+      <div class="btns"><button class="btn on" id="play">▶ Play</button><button class="btn" id="pause">⏸ Pause</button><button class="btn" id="step">Step</button><button class="btn" id="reset">Reset</button></div>
+      <div class="ctl"><div class="row"><label for="v">Launch speed v₀</label><output id="vO"></output></div><input id="v" type="range" min="1" max="60" step="0.5" value="20"></div>
+      <div class="ctl"><div class="row"><label for="a">Launch angle θ</label><output id="aO"></output></div><input id="a" type="range" min="-30" max="90" step="1" value="45"></div>
+      <div class="ctl"><div class="row"><label for="h">Launch height h₀</label><output id="hO"></output></div><input id="h" type="range" min="0" max="100" step="0.5" value="0"></div>
+      <div class="ctl"><div class="row"><label for="g">Gravity g</label><output id="gO"></output></div><input id="g" type="range" min="1" max="25" step="0.01" value="9.8">
+        <select id="pl" aria-label="Planet"><option value="9.8">Earth (9.8)</option><option value="1.62">Moon (1.62)</option><option value="3.71">Mars (3.71)</option><option value="8.87">Venus (8.87)</option><option value="24.79">Jupiter (24.79)</option><option value="c">Custom</option></select></div>
+      <div class="ctl" style="margin-bottom:0"><div class="row"><label for="sp">Simulation speed</label><output id="spO"></output></div><input id="sp" type="range" min="0.1" max="2" step="0.1" value="1"></div>
+      <div class="btns two"><button class="btn" id="keep">Keep trace</button><button class="btn" id="clear">Clear traces</button></div>
+      <p class="note">Assumptions: no air resistance, constant g, point mass, flat ground at y = 0. Angles below 0° launch downward.</p></section>
+    <section class="card" id="cLive"><h2>Live values</h2>
+      <div class="tiles">
+        <div class="tile"><small>Time t</small><b id="rT"></b></div><div class="tile"><small>Speed |v|</small><b class="c3" id="rV"></b></div>
+        <div class="tile"><small>x</small><b class="c1" id="rX"></b></div><div class="tile"><small>y</small><b class="c2" id="rY"></b></div>
+        <div class="tile"><small>vₓ</small><b class="c1" id="rVX"></b></div><div class="tile"><small>v<sub>y</sub></small><b class="c2" id="rVY"></b></div>
+        <div class="tile"><small>aₓ</small><b id="rAX"></b></div><div class="tile"><small>a<sub>y</sub></small><b class="c4" id="rAY"></b></div>
+      </div></section>
+    <section class="card" id="cPred"><h2>Predicted results</h2>
+      <div class="tiles">
+        <div class="tile"><small>Time of flight T</small><b id="pT"></b></div><div class="tile"><small>Range R</small><b class="c1" id="pR"></b></div>
+        <div class="tile"><small>Max height H</small><b class="c2" id="pH"></b></div><div class="tile"><small>Time to apex</small><b id="pA"></b></div>
+        <div class="tile"><small>Impact speed</small><b class="c3" id="pV"></b></div><div class="tile"><small>Impact angle</small><b id="pG"></b></div>
+      </div></section>
+  </div>
+</div>
+
+<section class="sec lec"><h2>Complete Physics Lecture</h2>
+<h3>1. Introduction</h3>
+<p>Throw a ball, kick a football, or fire water from a hose: once the object leaves your hand, the only force acting on it (ignoring air) is its weight. The path it follows is called a <b>trajectory</b>, and the object is a <b>projectile</b>. Projectile motion is the standard example of two-dimensional kinematics with constant acceleration.</p>
+<h3>2. Definition</h3>
+<p><b>Projectile motion</b> is the motion of an object that is launched with an initial velocity and then moves only under the influence of gravity. Its acceleration is constant and equal to <b>g</b>, directed vertically downward.</p>
+<h3>3. Physical principles</h3>
+<ul>
+<li><b>Independence of motions:</b> the horizontal and vertical motions do not affect each other. They share only the time t.</li>
+<li><b>Horizontal:</b> no force, so a<sub>x</sub> = 0 and v<sub>x</sub> is constant.</li>
+<li><b>Vertical:</b> weight only, so a<sub>y</sub> = −g (upward is positive).</li>
+<li><b>Energy:</b> with no drag, mechanical energy is conserved: ½v² + g·y is constant for every kilogram.</li>
+</ul>
+<h3>4. Step-by-step method</h3>
+<ol><li>Choose axes: x horizontal, y upward, origin at the launch point on the ground (or h₀ above it).</li><li>Split v₀ into components.</li><li>Write x(t) and y(t).</li><li>Find the time using y = 0 (landing) or v<sub>y</sub> = 0 (apex).</li><li>Substitute that time to get the distance or the other component.</li></ol>
+<h3>5. Important equations</h3>
+<div class="eq">vₓ₀ = v₀ cos θ  &nbsp;&nbsp; v<sub>y0</sub> = v₀ sin θ</div>
+<div class="eq">x(t) = v₀ cos θ · t</div>
+<div class="eq">y(t) = h₀ + v₀ sin θ · t − ½ g t²</div>
+<div class="eq">v<sub>y</sub>(t) = v₀ sin θ − g t</div>
+<div class="eq">t<sub>apex</sub> = v₀ sin θ / g &nbsp;&nbsp; H = h₀ + (v₀ sin θ)² / (2g)</div>
+<div class="eq">T = [ v₀ sin θ + √( (v₀ sin θ)² + 2 g h₀ ) ] / g</div>
+<div class="eq">R = v₀ cos θ · T &nbsp;&nbsp; (h₀ = 0:  R = v₀² sin 2θ / g)</div>
+<div class="eq">y = h₀ + x tan θ − g x² / (2 v₀² cos² θ)</div>
+<h3>6. Symbols and SI units</h3>
+<div class="tw"><table class="sym"><tr><th>Symbol</th><th>Meaning</th><th>SI unit</th></tr>
+<tr><td>v₀</td><td>Launch speed</td><td>m/s</td></tr><tr><td>θ</td><td>Launch angle above horizontal</td><td>degree or rad</td></tr>
+<tr><td>h₀</td><td>Launch height above ground</td><td>m</td></tr><tr><td>g</td><td>Gravitational acceleration (9.8 on Earth)</td><td>m/s²</td></tr>
+<tr><td>t, T</td><td>Time, total time of flight</td><td>s</td></tr><tr><td>x, y</td><td>Horizontal, vertical position</td><td>m</td></tr>
+<tr><td>vₓ, v<sub>y</sub></td><td>Velocity components</td><td>m/s</td></tr><tr><td>R, H</td><td>Range, maximum height</td><td>m</td></tr></table></div>
+<h3>7. Derivations</h3>
+<p><b>Components.</b> From the right triangle of the launch velocity, vₓ₀ = v₀ cos θ and v<sub>y0</sub> = v₀ sin θ.</p>
+<p><b>Time of flight.</b> The ball lands when y = 0: h₀ + v<sub>y0</sub>t − ½gt² = 0. This is a quadratic ½gt² − v<sub>y0</sub>t − h₀ = 0, and the physical (positive) root is t = [v<sub>y0</sub> + √(v<sub>y0</sub>² + 2gh₀)] / g. For h₀ = 0 this becomes T = 2v₀ sin θ / g.</p>
+<p><b>Maximum height.</b> At the top v<sub>y</sub> = 0, so t = v<sub>y0</sub>/g. Substituting into y(t) gives H = h₀ + v<sub>y0</sub>²/(2g).</p>
+<p><b>Range on level ground.</b> R = (v₀ cos θ)(2v₀ sin θ / g) = v₀² (2 sin θ cos θ) / g = v₀² sin 2θ / g. Since sin 2θ is largest at 2θ = 90°, the maximum range occurs at θ = 45°. Angles θ and 90° − θ give the same range.</p>
+<p><b>Parabola.</b> Eliminating t = x/(v₀ cos θ) from y(t) gives y = h₀ + x tan θ − gx²/(2v₀² cos² θ), which is a parabola.</p>
+<p><b>Impact speed.</b> By energy conservation, v² = v₀² + 2gh₀, independent of the launch angle.</p>
+<h3>8. Physical interpretation</h3>
+<p>Gravity changes only v<sub>y</sub>, by 9.8 m/s every second on Earth. The ball slows while rising, stops vertically at the apex, then speeds up while falling. The speed at the apex is not zero, because vₓ is still there. On the Moon g is six times smaller, so the same throw goes about six times farther.</p>
+<h3>9. Everyday applications</h3>
+<p>Sports (basketball, football, javelin, long jump), water fountains and fire hoses, sprinklers, artillery and rocketry design, and video-game physics.</p>
+<h3>10. Common misconceptions</h3>
+<div class="box warn"><ul>
+<li>"A force keeps pushing the ball forward." No. After launch only gravity acts, and the horizontal velocity stays constant because there is no horizontal force.</li>
+<li>"At the top the acceleration is zero." No. Velocity in y is zero but a<sub>y</sub> = −g throughout.</li>
+<li>"Heavier objects fall faster or fly differently." Without air resistance, mass does not appear in any equation.</li>
+<li>"Higher angle always means longer range." Range is greatest at 45° (for h₀ = 0) and decreases beyond it.</li></ul></div>
+<h3>11. What to observe in the simulation</h3>
+<div class="box ok"><ul>
+<li>Set θ = 30° and then 60° and use <b>Keep trace</b>. The ranges are equal.</li>
+<li>Change g to Moon: R grows by 9.8/1.62 ≈ 6.</li>
+<li>Pause at the apex: v<sub>y</sub> = 0 but v = vₓ, and a<sub>y</sub> still shows −g.</li>
+<li>In the Energy tab, KE and PE trade places but the total stays constant.</li>
+<li>Raise h₀: the impact speed increases but the range and impact angle change too.</li></ul></div>
+</section>
+
+<section class="sec"><h2>Worked Numerical Examples</h2>
+<div class="ex"><h3>Example 1: Ball kicked from the ground</h3>
+<ol><li><b>Given:</b> v₀ = 20 m/s, θ = 30°, h₀ = 0, g = 9.8 m/s².</li>
+<li><b>Required:</b> time of flight T, maximum height H, range R.</li>
+<li><b>Equations:</b> T = 2v₀ sin θ / g, H = (v₀ sin θ)² / (2g), R = vₓ₀ T.</li>
+<li><b>Components:</b> v<sub>y0</sub> = 20 sin 30° = 10 m/s; vₓ₀ = 20 cos 30° = 17.32 m/s.</li>
+<li><b>Calculation:</b> T = 2(10)/9.8 = 2.04 s. H = 10² / (2 × 9.8) = 100/19.6 = 5.10 m. R = 17.32 × 2.04 = 35.3 m.</li></ol>
+<div class="ans">Answer: T = 2.04 s, H = 5.10 m, R = 35.3 m.</div></div>
+<div class="ex"><h3>Example 2: Ball thrown horizontally from a cliff</h3>
+<ol><li><b>Given:</b> h₀ = 45 m, v₀ = 15 m/s horizontal (θ = 0°), g = 9.8 m/s².</li>
+<li><b>Required:</b> time to land, horizontal distance, impact speed and angle.</li>
+<li><b>Equations:</b> h₀ = ½gT², R = v₀T, v<sub>y</sub> = −gT, v = √(vₓ² + v<sub>y</sub>²).</li>
+<li><b>Time:</b> T = √(2h₀/g) = √(90/9.8) = √9.184 = 3.03 s.</li>
+<li><b>Distance:</b> R = 15 × 3.03 = 45.5 m.</li>
+<li><b>Impact:</b> |v<sub>y</sub>| = 9.8 × 3.03 = 29.7 m/s, v = √(15² + 29.7²) = √1107 = 33.3 m/s, angle = tan⁻¹(29.7/15) = 63.2° below horizontal.</li></ol>
+<div class="ans">Answer: T = 3.03 s, R = 45.5 m, v = 33.3 m/s at 63.2° below horizontal.</div></div>
+</section>
+
+<section class="sec"><h2>Learning Assessment</h2>
+<h3 style="color:var(--cy)">Conceptual questions</h3>
+<ol class="qs"><li>Why does the horizontal velocity of an ideal projectile stay constant?</li>
+<li>What are the velocity and acceleration of a projectile at the top of its path?</li>
+<li>Two balls are launched at 30° and 60° with equal speed from level ground. Compare their ranges and times of flight.</li>
+<li>Does a heavier ball travel farther than a lighter one in a vacuum? Explain.</li>
+<li>A ball is dropped and another is thrown horizontally at the same instant from the same height. Which lands first?</li></ol>
+<h3 style="color:var(--cy)">Numerical questions (take g = 9.8 m/s²)</h3>
+<ol class="qs"><li>Find the range of a projectile launched at 30 m/s and 45° from level ground.</li>
+<li>Find the maximum height for v₀ = 40 m/s at 60°.</li>
+<li>Find the time of flight for v₀ = 25 m/s at 37° (sin 37° ≈ 0.6) from level ground.</li>
+<li>A stone is thrown horizontally at 10 m/s from a 20 m high roof. How far from the base does it land?</li>
+<li>Find the range of a 20 m/s, 45° launch on the Moon (g = 1.62 m/s²).</li></ol>
+<details><summary>Show answers and explanations</summary>
+<p><b>Conceptual</b></p><ol>
+<li>No horizontal force acts (air resistance ignored), so a<sub>x</sub> = 0 and v<sub>x</sub> does not change.</li>
+<li>Velocity is purely horizontal (v = vₓ, with v<sub>y</sub> = 0). Acceleration is still g = 9.8 m/s² downward.</li>
+<li>Ranges are equal because sin 60° = sin 120°, i.e. the angles are complementary. The 60° ball stays up longer (T ∝ sin θ), so it has the longer time of flight and reaches a greater height.</li>
+<li>No. Mass cancels out of every projectile equation, so the paths are identical without air resistance.</li>
+<li>They land at the same time. Both have v<sub>y0</sub> = 0 and the same vertical motion; the horizontal velocity does not affect it.</li></ol>
+<p><b>Numerical</b></p><ol>
+<li>R = v₀² sin 2θ / g = 900 × 1 / 9.8 = <b>91.8 m</b>.</li>
+<li>v<sub>y0</sub> = 40 sin 60° = 34.64 m/s; H = 34.64² / 19.6 = 1200 / 19.6 = <b>61.2 m</b>.</li>
+<li>v<sub>y0</sub> = 25 × 0.6 = 15 m/s; T = 2(15)/9.8 = <b>3.06 s</b>.</li>
+<li>t = √(2 × 20 / 9.8) = 2.02 s; x = 10 × 2.02 = <b>20.2 m</b>.</li>
+<li>R = 400 × 1 / 1.62 = <b>247 m</b> (about 6 times the 40.8 m on Earth).</li></ol></details>
+</section>
+<footer>SimuPhysix Mechanics Laboratory · Topic 1 of 20 · <a href="free-fall.html">Next: Free Fall →</a></footer>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id),TAU=Math.PI*2,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const f=(x,d=2)=>{const s=x.toFixed(d);return /^-0(\.0+)?$/.test(s)?s.slice(1):s};
+const CY='#38d0ff',AM='#ffb347',RD='#ff6b81',GN='#4ade80',MU='#9bb0dc';
+const DEF={v:20,a:45,h:0,g:9.8},st={...DEF};
+let t=0,playing=false,sp=1,ghosts=[],gtab='pos';
+const sc=$('scene'),gs=sc.getContext('2d'),gc=$('graph'),gg=gc.getContext('2d'),D={s:{w:600,h:380},g:{w:600,h:240}};
+function fit(){[[sc,'s',w=>clamp(w*.6,300,480)],[gc,'g',w=>clamp(w*.4,210,280)]].forEach(([c,k,fh])=>{const w=c.clientWidth,h=Math.round(fh(w)),d=devicePixelRatio||1;c.style.height=h+'px';c.width=Math.round(w*d);c.height=Math.round(h*d);c.getContext('2d').setTransform(d,0,0,d,0,0);D[k]={w,h};});}
+function P(p=st){const th=p.a*Math.PI/180,vx=p.v*Math.cos(th),vy=p.v*Math.sin(th),disc=vy*vy+2*p.g*p.h,T=Math.max(0,(vy+Math.sqrt(disc))/p.g),ta=vy>0?vy/p.g:0;
+  return{g:p.g,h:p.h,vx,vy,disc,T,R:vx*T,ta,xa:vx*ta,H:p.h+(vy>0?vy*vy/(2*p.g):0),vimp:Math.sqrt(disc+vx*vx),ang:Math.atan2(Math.sqrt(disc),vx)*180/Math.PI};}
+const at=(p,tt)=>({x:p.vx*tt,y:Math.max(0,p.h+p.vy*tt-.5*p.g*tt*tt),vy:p.vy-p.g*tt});
+function nice(r){const raw=r/6,m=10**Math.floor(Math.log10(raw)),n=raw/m;return(n<1.5?1:n<3.5?2:n<7.5?5:10)*m;}
+function view(p){const w=D.s.w,h=D.s.h,ML=52,MR=20,MT=22,MB=38,xm=Math.max(p.R,p.xa,8)*1.08,ym=Math.max(p.H,p.h,3)*1.2,s=Math.min((w-ML-MR)/xm,(h-MT-MB)/ym);return{w,h,ML,MB,MT,MR,s,X:x=>ML+x*s,Y:y=>h-MB-y*s};}
+function arrow(g,x,y,dx,dy,col){const l=Math.hypot(dx,dy);if(l<4)return;g.strokeStyle=col;g.fillStyle=col;g.lineWidth=2.5;g.beginPath();g.moveTo(x,y);g.lineTo(x+dx,y+dy);g.stroke();const a=Math.atan2(dy,dx),X=x+dx,Y=y+dy;g.beginPath();g.moveTo(X,Y);g.lineTo(X-9*Math.cos(a-.4),Y-9*Math.sin(a-.4));g.lineTo(X-9*Math.cos(a+.4),Y-9*Math.sin(a+.4));g.fill();}
+function path(g,p,vw,t1){g.beginPath();const n=100;for(let i=0;i<=n;i++){const q=at(p,t1*i/n);i?g.lineTo(vw.X(q.x),vw.Y(q.y)):g.moveTo(vw.X(q.x),vw.Y(q.y));}g.stroke();}
+function drawScene(){
+  const p=P(),vw=view(p),g=gs,{w,h,ML,MB,MT,MR,s,X,Y}=vw;g.clearRect(0,0,w,h);
+  const gr=g.createLinearGradient(0,0,0,h-MB);gr.addColorStop(0,'#0a1a3f');gr.addColorStop(1,'#12306b');g.fillStyle=gr;g.fillRect(0,0,w,h);
+  g.font='11.5px Segoe UI,Arial';g.lineWidth=1;g.textBaseline='middle';
+  const sx=nice((w-ML-MR)/s),sy=nice((h-MT-MB)/s);
+  g.textAlign='center';for(let x=0;X(x)<w-MR+1;x+=sx){g.strokeStyle='rgba(120,150,210,.18)';g.beginPath();g.moveTo(X(x),MT);g.lineTo(X(x),h-MB);g.stroke();g.fillStyle=MU;g.fillText(f(x,x<10&&sx<1?1:0),X(x),h-MB+22);}
+  g.textAlign='right';for(let y=0;Y(y)>MT-1;y+=sy){g.strokeStyle='rgba(120,150,210,.18)';g.beginPath();g.moveTo(ML,Y(y));g.lineTo(w-MR,Y(y));g.stroke();g.fillStyle=MU;g.fillText(f(y,y<10&&sy<1?1:0),ML-6,Y(y));}
+  g.fillStyle=MU;g.textAlign='right';g.fillText('x (m)',w-MR,h-8);g.textAlign='left';g.fillText('y (m)',6,MT-8);
+  g.fillStyle='#2f6a3a';g.fillRect(0,h-MB,w,MB);g.fillStyle='#4f9a55';g.fillRect(0,h-MB,w,3);
+  if(p.h>0){g.fillStyle='#6b7a99';g.fillRect(X(0)-16,Y(p.h),16,p.h*s);}
+  ghosts.forEach((q,i)=>{g.strokeStyle='rgba(200,215,255,'+(.25+i*.1)+')';g.lineWidth=1.8;path(g,q,vw,q.T);});
+  if(p.T>0){g.setLineDash([6,6]);g.strokeStyle='rgba(255,255,255,.4)';g.lineWidth=1.6;path(g,p,vw,p.T);g.setLineDash([]);
+    g.strokeStyle=AM;g.lineWidth=3;path(g,p,vw,t);
+    if(p.vy>0){g.setLineDash([3,4]);g.strokeStyle='rgba(255,255,255,.4)';g.lineWidth=1;g.beginPath();g.moveTo(ML,Y(p.H));g.lineTo(X(p.xa),Y(p.H));g.lineTo(X(p.xa),h-MB);g.stroke();g.setLineDash([]);
+      g.fillStyle='#fff';g.beginPath();g.arc(X(p.xa),Y(p.H),4,0,TAU);g.fill();g.textAlign='left';g.fillText('apex H = '+f(p.H,1)+' m',X(p.xa)+8,Y(p.H)-10);}
+    g.fillStyle=GN;g.beginPath();g.arc(X(p.R),Y(0),5,0,TAU);g.fill();g.textAlign='center';g.fillText('R = '+f(p.R,1)+' m',clamp(X(p.R),ML+40,w-MR-40),Y(0)-12);}
+  const th=-st.a*Math.PI/180;g.save();g.translate(X(0),Y(p.h));g.rotate(th);g.fillStyle='#8aa0cf';g.fillRect(0,-5,30,10);g.restore();
+  g.strokeStyle='rgba(255,255,255,.55)';g.lineWidth=1.3;g.beginPath();g.arc(X(0),Y(p.h),40,0,th,th<0);g.stroke();g.fillStyle='#fff';g.textAlign='left';g.fillText('θ = '+st.a+'°',X(0)+46,Y(p.h)-(st.a>8?10:-2));
+  const q=at(p,t),bx=X(q.x),by=Y(q.y),vmax=Math.max(p.vimp,st.v,1),k=.3*Math.min(w,h)/vmax;
+  if(p.T>0&&t<p.T-1e-9||t===0){arrow(g,bx,by,p.vx*k,0,CY);arrow(g,bx,by,0,-q.vy*k,AM);arrow(g,bx,by,p.vx*k,-q.vy*k,GN);}
+  g.fillStyle='#fff';g.strokeStyle='#0a1a3f';g.lineWidth=2;g.beginPath();g.arc(bx,by,7,0,TAU);g.fill();g.stroke();
+}
+function plot(g,W,H,series,tmax,ylab){
+  g.clearRect(0,0,W,H);const L=58,R=14,T=26,B=34,pw=W-L-R,ph=H-T-B;
+  if(tmax<=0){g.fillStyle=MU;g.font='14px Segoe UI,Arial';g.textAlign='center';g.fillText('No flight: change the inputs.',W/2,H/2);return;}
+  let lo=0,hi=0;series.forEach(s=>{for(let i=0;i<=80;i++){const v=s.fn(tmax*i/80);lo=Math.min(lo,v);hi=Math.max(hi,v);}});
+  if(hi-lo<1e-9)hi=lo+1;const pad=(hi-lo)*.08;hi+=pad;if(lo<0)lo-=pad;
+  const X=tt=>L+pw*tt/tmax,Y=v=>T+ph*(1-(v-lo)/(hi-lo));
+  g.font='11.5px Segoe UI,Arial';g.lineWidth=1;g.textBaseline='middle';
+  const sy=nice(hi-lo),sx=nice(tmax);
+  g.textAlign='right';for(let v=Math.ceil(lo/sy)*sy;v<=hi;v+=sy){g.strokeStyle=Math.abs(v)<1e-9?'#4a62a8':'#182a58';g.beginPath();g.moveTo(L,Y(v));g.lineTo(L+pw,Y(v));g.stroke();g.fillStyle=MU;g.fillText(f(v,Math.abs(v)<10&&sy<1?1:0),L-6,Y(v));}
+  g.textAlign='center';for(let x=0;x<=tmax+1e-9;x+=sx){g.strokeStyle='#182a58';g.beginPath();g.moveTo(X(x),T);g.lineTo(X(x),T+ph);g.stroke();g.fillStyle=MU;g.fillText(f(x,sx<1?1:0),X(x),H-20);}
+  g.fillStyle=MU;g.fillText('t (s)',L+pw/2,H-6);g.textAlign='left';g.fillText(ylab,6,12);
+  series.forEach(s=>{g.strokeStyle=s.c;g.lineWidth=2.6;g.setLineDash(s.d||[]);g.beginPath();for(let i=0;i<=120;i++){const tt=tmax*i/120,x=X(tt),y=Y(s.fn(tt));i?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();g.setLineDash([]);});
+  const cx=X(clamp(t,0,tmax));g.strokeStyle='rgba(255,255,255,.5)';g.setLineDash([4,4]);g.beginPath();g.moveTo(cx,T);g.lineTo(cx,T+ph);g.stroke();g.setLineDash([]);
+  series.forEach(s=>{g.fillStyle=s.c;g.beginPath();g.arc(cx,Y(s.fn(clamp(t,0,tmax))),5,0,TAU);g.fill();});
+  let lx=L+4;g.textAlign='left';series.forEach(s=>{g.fillStyle=s.c;g.fillRect(lx,18,16,3);g.fillText(s.n,lx+20,19);lx+=g.measureText(s.n).width+40;});
+}
+const GN_NOTE={pos:'x(t) grows linearly; y(t) is a downward-opening parabola.',vel:'vₓ is constant; v<sub>y</sub> falls linearly with slope −g; speed is lowest at the apex.',acc:'aₓ = 0 and a<sub>y</sub> = −g at all times, including the apex.',en:'Per unit mass: KE = ½v², PE = g·y. Their sum stays constant (no drag).'};
+function drawGraph(){
+  const p=P(),T=p.T,sr=[];
+  if(gtab==='pos')sr.push({fn:tt=>p.vx*tt,c:CY,n:'x (m)'},{fn:tt=>at(p,tt).y,c:AM,n:'y (m)'});
+  if(gtab==='vel')sr.push({fn:()=>p.vx,c:CY,n:'vₓ'},{fn:tt=>p.vy-p.g*tt,c:AM,n:'v_y'},{fn:tt=>Math.hypot(p.vx,p.vy-p.g*tt),c:GN,n:'|v|',d:[6,4]});
+  if(gtab==='acc')sr.push({fn:()=>0,c:CY,n:'aₓ'},{fn:()=>-p.g,c:RD,n:'a_y'});
+  if(gtab==='en')sr.push({fn:tt=>.5*(p.vx**2+(p.vy-p.g*tt)**2),c:AM,n:'KE/m'},{fn:tt=>p.g*at(p,tt).y,c:CY,n:'PE/m'},{fn:()=>.5*(p.vx**2+p.vy**2)+p.g*p.h,c:GN,n:'Total',d:[6,4]});
+  plot(gg,D.g.w,D.g.h,sr,T,{pos:'metres',vel:'m/s',acc:'m/s²',en:'J/kg'}[gtab]);$('gnote').innerHTML=GN_NOTE[gtab];
+}
+function read(){
+  const p=P(),q=at(p,t),onG=q.y<=1e-9&&t>0;
+  $('rT').textContent=f(t)+' s';$('rX').textContent=f(q.x)+' m';$('rY').textContent=f(q.y)+' m';$('rVX').textContent=f(p.vx)+' m/s';
+  const vy=onG?-Math.sqrt(p.disc):q.vy;$('rVY').textContent=f(vy)+' m/s';$('rV').textContent=f(Math.hypot(p.vx,vy))+' m/s';$('rAX').textContent='0 m/s²';$('rAY').textContent=f(-p.g)+' m/s²';
+  $('pT').textContent=f(p.T)+' s';$('pR').textContent=f(p.R)+' m';$('pH').textContent=f(p.H)+' m';$('pA').textContent=p.vy>0?f(p.ta)+' s':'—';$('pV').textContent=f(p.vimp)+' m/s';$('pG').textContent=p.T>0?f(p.ang,1)+'° below horizontal':'—';
+  $('msg').textContent=p.T<=0?'No flight: launch from height > 0 or at an upward angle.':t>=p.T&&t>0?'Landed after '+f(p.T)+' s, range '+f(p.R)+' m, impact speed '+f(p.vimp)+' m/s.':'';
+}
+function outs(){$('vO').textContent=st.v+' m/s';$('aO').textContent=st.a+'°';$('hO').textContent=st.h+' m';$('gO').textContent=f(st.g)+' m/s²';$('spO').textContent=sp.toFixed(1)+'×';}
+['v','a','h','g'].forEach(k=>$(k).addEventListener('input',()=>{st[k]=+$(k).value;if(k==='g'){const o=[...$('pl').options].find(x=>x.value!=='c'&&Math.abs(+x.value-st.g)<.005);$('pl').value=o?o.value:'c';}t=0;playing=false;sync();outs();}));
+$('pl').onchange=e=>{if(e.target.value==='c')return;st.g=+e.target.value;$('g').value=st.g;t=0;playing=false;sync();outs();};
+$('sp').oninput=e=>{sp=+e.target.value;outs();};
+function sync(){$('play').classList.toggle('on',playing);$('pause').classList.toggle('on',!playing&&t>0);}
+$('play').onclick=()=>{const p=P();if(t>=p.T)t=0;playing=p.T>0;sync();};
+$('pause').onclick=()=>{playing=false;sync();};
+$('step').onclick=()=>{playing=false;const p=P();t=Math.min(p.T,t+.1);sync();};
+$('reset').onclick=()=>{Object.assign(st,DEF);['v','a','h','g'].forEach(k=>$(k).value=st[k]);$('pl').value='9.8';sp=1;$('sp').value=1;t=0;playing=false;ghosts=[];sync();outs();};
+$('keep').onclick=()=>{const p=P();if(p.T>0){ghosts.push(p);if(ghosts.length>3)ghosts.shift();}};
+$('clear').onclick=()=>{ghosts=[];};
+document.querySelectorAll('#gtabs .tab').forEach(b=>b.onclick=()=>{gtab=b.dataset.g;document.querySelectorAll('#gtabs .tab').forEach(x=>x.classList.toggle('on',x===b));});
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!/^(BUTTON|INPUT|SELECT|SUMMARY)$/.test(e.target.tagName)){e.preventDefault();playing?$('pause').click():$('play').click();}});
+addEventListener('resize',fit);
+let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(playing){const T=P().T;t+=dt*sp;if(t>=T){t=T;playing=false;sync();}}
+  drawScene();drawGraph();read();requestAnimationFrame(frame);}
+fit();outs();sync();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
